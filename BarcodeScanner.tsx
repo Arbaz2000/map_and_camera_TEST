@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, View, Text, Alert } from 'react-native';
-import { Camera } from 'react-native-camera-kit';
+import { Camera, CameraType } from 'react-native-camera-kit';
+import Sound from 'react-native-sound';
 
 interface Code {
   type: string;
@@ -11,6 +12,59 @@ const BarcodeScanner: React.FC = () => {
   const [scannedCodes, setScannedCodes] = useState<Code[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const lastScannedCode = useRef<string>('');
+  const beepSound = useRef<Sound | null>(null);
+
+  // Initialize sound on component mount
+  useEffect(() => {
+    // Enable playback in silence mode
+    Sound.setCategory('Playback');
+    
+    // Create a simple beep sound using a short audio URL
+    beepSound.current = new Sound(
+      'https://www.soundjay.com/buttons/sounds/beep-23.mp3',
+      undefined,
+      error => {
+        if (error) {
+          console.log(
+            'Failed to load beep sound from URL, trying system sound',
+          );
+          // Fallback to system notification sound
+          beepSound.current = new Sound(
+            'notification',
+            Sound.MAIN_BUNDLE,
+            error2 => {
+              if (error2) {
+                console.log('System notification sound also failed');
+              } else {
+                console.log('System notification sound loaded successfully');
+              }
+            },
+          );
+        } else {
+          console.log('Beep sound loaded successfully');
+        }
+      },
+    );
+
+    // Cleanup sound on unmount
+    return () => {
+      if (beepSound.current) {
+        beepSound.current.release();
+      }
+    };
+  }, []);
+
+  const playBeepSound = () => {
+    if (beepSound.current) {
+      beepSound.current.play((success) => {
+        if (success) {
+          console.log('Beep sound played successfully');
+        } else {
+          console.log('Failed to play beep sound');
+        }
+      });
+    }
+  };
 
   const onReadCode = (event: any) => {
     const scannedValue = event.nativeEvent.codeStringValue;
@@ -32,6 +86,9 @@ const BarcodeScanner: React.FC = () => {
     };
     
     setScannedCodes([code]);
+    
+    // Play beep sound when code is scanned
+    playBeepSound();
     
     // Show alert with scanned code info
     Alert.alert(
@@ -57,7 +114,7 @@ const BarcodeScanner: React.FC = () => {
     <View style={styles.container}>
       <Camera
         style={styles.camera}
-        cameraType="back"
+        cameraType={CameraType.Back}
         flashMode="auto"
         focusMode="on"
         zoomMode="on"
