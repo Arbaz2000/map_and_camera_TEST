@@ -1,7 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, Alert } from 'react-native';
+import { StyleSheet, View, Text, Alert, TouchableOpacity } from 'react-native';
 import { Camera, CameraType } from 'react-native-camera-kit';
 import Sound from 'react-native-sound';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
+type RootStackParamList = {
+  BarcodeScanner: undefined;
+  GoogleMaps: undefined;
+};
+
+type BarcodeScannerNavigationProp = StackNavigationProp<RootStackParamList, 'BarcodeScanner'>;
 
 interface Code {
   type: string;
@@ -9,8 +18,10 @@ interface Code {
 }
 
 const BarcodeScanner: React.FC = () => {
+  const navigation = useNavigation<BarcodeScannerNavigationProp>();
   const [scannedCodes, setScannedCodes] = useState<Code[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [torchMode, setTorchMode] = useState<'on' | 'off'>('off');
   const lastScannedCode = useRef<string>('');
   const beepSound = useRef<Sound | null>(null);
 
@@ -18,30 +29,21 @@ const BarcodeScanner: React.FC = () => {
   useEffect(() => {
     // Enable playback in silence mode
     Sound.setCategory('Playback');
-    
+
     // Create a simple beep sound using a short audio URL
     beepSound.current = new Sound(
       'https://www.soundjay.com/buttons/sounds/beep-23.mp3',
       undefined,
       error => {
         if (error) {
-          console.log(
-            'Failed to load beep sound from URL, trying system sound',
-          );
           // Fallback to system notification sound
           beepSound.current = new Sound(
             'notification',
             Sound.MAIN_BUNDLE,
-            error2 => {
-              if (error2) {
-                console.log('System notification sound also failed');
-              } else {
-                console.log('System notification sound loaded successfully');
-              }
+            _error2 => {
+              // Silent fallback
             },
           );
-        } else {
-          console.log('Beep sound loaded successfully');
         }
       },
     );
@@ -56,58 +58,50 @@ const BarcodeScanner: React.FC = () => {
 
   const playBeepSound = () => {
     if (beepSound.current) {
-      beepSound.current.play((success) => {
-        if (success) {
-          console.log('Beep sound played successfully');
-        } else {
-          console.log('Failed to play beep sound');
-        }
-      });
+      beepSound.current.play();
     }
+  };
+  const toggleTorch = () => {
+    setTorchMode(prevMode => {
+      return prevMode === 'off' ? 'on' : 'off';
+    });
   };
 
   const onReadCode = (event: any) => {
     const scannedValue = event.nativeEvent.codeStringValue;
-    
+
     // Prevent duplicate scans of the same code
     if (lastScannedCode.current === scannedValue || isScanning) {
       return;
     }
-    
-    console.log('Code scanned:', scannedValue);
-    
+
     // Set scanning state to prevent multiple scans
     setIsScanning(true);
     lastScannedCode.current = scannedValue;
-    
+
     const code: Code = {
       type: event.nativeEvent.type,
-      value: scannedValue
+      value: scannedValue,
     };
-    
+
     setScannedCodes([code]);
-    
+
     // Play beep sound when code is scanned
     playBeepSound();
-    
+
     // Show alert with scanned code info
-    Alert.alert(
-      'Code Scanned!',
-      `Type: ${code.type}\nValue: ${code.value}`,
-      [
-        { 
-          text: 'OK', 
-          onPress: () => {
-            console.log('OK Pressed');
-            // Reset scanning state after a delay to allow new scans
-            setTimeout(() => {
-              setIsScanning(false);
-              lastScannedCode.current = '';
-            }, 2000); // 2 second delay before allowing new scans
-          }
-        }
-      ]
-    );
+    Alert.alert('Code Scanned!', `Type: ${code.type}\nValue: ${code.value}`, [
+      {
+        text: 'OK',
+        onPress: () => {
+          // Reset scanning state after a delay to allow new scans
+          setTimeout(() => {
+            setIsScanning(false);
+            lastScannedCode.current = '';
+          }, 2000); // 2 second delay before allowing new scans
+        },
+      },
+    ]);
   };
 
   return (
@@ -115,7 +109,7 @@ const BarcodeScanner: React.FC = () => {
       <Camera
         style={styles.camera}
         cameraType={CameraType.Back}
-        flashMode="auto"
+        torchMode={torchMode}
         focusMode="on"
         zoomMode="on"
         onReadCode={onReadCode}
@@ -128,6 +122,24 @@ const BarcodeScanner: React.FC = () => {
         <Text style={styles.overlayText}>
           {isScanning ? 'Scanning paused...' : 'Point camera at a barcode'}
         </Text>
+
+        {/* Navigation Button */}
+        <View style={styles.navigationButtonContainer}>
+          <TouchableOpacity 
+            style={styles.navigationButton} 
+            onPress={() => navigation.navigate('GoogleMaps')}
+          >
+            <Text style={styles.navigationButtonText}>🗺️ Go to Maps</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Flash Controls */}
+        <View style={styles.flashButtonContainer}>
+          <Text style={styles.torchButton} onPress={toggleTorch}>
+            {torchMode === 'on' ? '💡 TORCH' : '🌙 TORCH'}
+          </Text>
+        </View>
+
         {scannedCodes.length > 0 && (
           <View style={styles.resultContainer}>
             <Text style={styles.resultText}>
@@ -165,6 +177,25 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
   },
+  navigationButtonContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 10,
+    borderRadius: 20,
+  },
+  navigationButton: {
+    backgroundColor: '#2196F3',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  navigationButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
   resultContainer: {
     position: 'absolute',
     bottom: 100,
@@ -179,17 +210,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  text: {
-    color: 'white',
-    fontSize: 18,
-    textAlign: 'center',
-    marginTop: 100,
+
+  flashButtonContainer: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 10,
+    borderRadius: 20,
   },
-  button: {
-    color: '#007AFF',
-    fontSize: 18,
+  flashButton: {
+    color: 'white',
+    fontSize: 16,
     textAlign: 'center',
-    marginTop: 20,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  torchButton: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
 });
 

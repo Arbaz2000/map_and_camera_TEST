@@ -57,3 +57,62 @@ Interleaved2of5 (ITF) and ITF-14
 Interleaved2of5 (ITF) barcodes are supported by both, Android and iOS, where Android's SDK supports barcodes in ITF format with a minimum length of 6 characters.
 
 ITF-14 is a sub type of interleaved2of5 which always encodes 14 characters. The ITF-14 type is only supported by iOS. If you want to have the restriction to 14 characters in Android as well, you have to handle this in your own code.
+
+
+
+
+
+
+
+
+
+The react-native-camera-kit library provides functionality to control the flash mode of the device's camera.
+Controlling Flash Mode:
+To utilize the flash, the Camera component from react-native-camera-kit accepts a flashMode prop. This prop can be set to different values to control the flash behavior:
+"auto": The flash fires automatically when necessary, based on lighting conditions.
+"on": The flash is always on when capturing an image or video.
+"off": The flash is always off.
+"torch": The flash acts as a continuous torch, illuminating the scene.
+Example Implementation:
+JavaScript
+
+import { Camera, CameraType } from 'react-native-camera-kit';
+
+// ... inside your component's render method or JSX
+<Camera
+  ref={(ref) => (this.camera = ref)}
+  cameraType={CameraType.Back} // or CameraType.Front
+  flashMode="auto" // Set the desired flash mode
+/>
+Changing Flash Mode Dynamically:
+To change the flash mode dynamically (e.g., with a button toggle), you would typically manage the flashMode in your component's state and update it based on user interaction.
+JavaScript
+
+import React, { useState } from 'react';
+import { Camera, CameraType } from 'react-native-camera-kit';
+import { Button } from 'react-native';
+
+const MyCameraComponent = () => {
+  const [flashMode, setFlashMode] = useState('off'); // Initial flash mode
+
+  const toggleFlash = () => {
+    setFlashMode((prevMode) => {
+      if (prevMode === 'off') return 'on';
+      if (prevMode === 'on') return 'auto';
+      return 'off'; // Cycle through off, on, auto
+    });
+  };
+
+  return (
+    <>
+      <Camera
+        ref={(ref) => (this.camera = ref)}
+        cameraType={CameraType.Back}
+        flashMode={flashMode}
+      />
+      <Button title="Toggle Flash" onPress={toggleFlash} />
+    </>
+  );
+};
+
+export default MyCameraComponent;
