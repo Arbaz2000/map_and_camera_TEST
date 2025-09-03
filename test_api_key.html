@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Maps API Key Test</title>
+    <style>
+        #map { height: 400px; width: 100%; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Google Maps API Key Test</h1>
+    <div id="status"></div>
+    <div id="map"></div>
+
+    <script>
+        const API_KEY = 'AIzaSyAkohimbh6FL9mkUXhfdhIy6qKm_DAADeQ';
+        const statusDiv = document.getElementById('status');
+        
+        function initMap() {
+            try {
+                const map = new google.maps.Map(document.getElementById('map'), {
+                    center: { lat: 24.556272, lng: 73.714170 },
+                    zoom: 15,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP
+                });
+                
+                // Add a marker
+                new google.maps.Marker({
+                    position: { lat: 24.556272, lng: 73.714170 },
+                    map: map,
+                    title: 'Test Location'
+                });
+                
+                statusDiv.innerHTML = '<span class="success">✅ API Key Working! Map loaded successfully.</span>';
+                console.log('Map loaded successfully');
+            } catch (error) {
+                statusDiv.innerHTML = '<span class="error">❌ Error: ' + error.message + '</span>';
+                console.error('Map error:', error);
+            }
+        }
+        
+        function handleError() {
+            statusDiv.innerHTML = '<span class="error">❌ Failed to load Google Maps API</span>';
+            console.error('Failed to load Google Maps API');
+        }
+    </script>
+    
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAkohimbh6FL9mkUXhfdhIy6qKm_DAADeQ&callback=initMap"
+        onerror="handleError()">
+    </script>
+</body>
+</html>
